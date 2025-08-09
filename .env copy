@@ -1,2 +1,2 @@
-DATABASE_URL="postgresql://postgres:postgres@localhost:5435/ecommerce_zapatillas"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5435/bookly"
 GITHUB_TOKEN=your_github_token_here
