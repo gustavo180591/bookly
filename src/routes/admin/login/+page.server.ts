@@ -1,6 +1,5 @@
 import { redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { PRIVATE_ADMIN_PASSWORD } from '$env/static/private';
 
 export const load: PageServerLoad = async ({ locals }) => {
   // If already logged in, redirect to admin
@@ -16,7 +15,8 @@ export const actions = {
     const password = data.get('password');
     const redirectTo = data.get('redirectTo') as string;
 
-    if (password === PRIVATE_ADMIN_PASSWORD) {
+    const ADMIN_PASS = process.env.PRIVATE_ADMIN_PASSWORD;
+    if (password === ADMIN_PASS) {
       // Set secure, httpOnly cookie
       cookies.set('admin_session', 'authenticated', {
         path: '/admin',

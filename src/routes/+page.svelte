@@ -59,8 +59,8 @@
           method="POST" 
           class="space-y-6" 
           on:submit|preventDefault={async (e) => {
-            const form = e.currentTarget;
-            const formData = new FormData(form);
+            const htmlForm = e.currentTarget as HTMLFormElement;
+            const formData = new FormData(htmlForm);
             const name = formData.get('name')?.toString() || '';
             const email = formData.get('email')?.toString() || '';
             const message = formData.get('message')?.toString() || '';
@@ -82,8 +82,8 @@
             }
             
             // Show loading state
-            const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-            const originalHTML = submitButton?.innerHTML || '';
+            const submitButton = htmlForm.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+            const originalHTML = submitButton ? submitButton.innerHTML : '';
             
             if (submitButton) {
               submitButton.disabled = true;
@@ -97,7 +97,7 @@
             }
             
             try {
-              const response = await fetch(form.action, {
+              const response = await fetch(htmlForm.action, {
                 method: 'POST',
                 body: formData
               });
@@ -110,7 +110,7 @@
               
               if (result.type === 'success') {
                 // Reset form on success
-                form.reset();
+                htmlForm.reset();
                 form = { success: true, message: result.message };
                 toast.success('Message sent successfully!');
               } else {

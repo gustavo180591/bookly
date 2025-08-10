@@ -6,33 +6,8 @@ import type { ContactStatus, Prisma } from '@prisma/client';
 const CONTACTS_PER_PAGE = 10;
 
 // Server-side types
-type ContactWithStatus = {
-  id: string;
-  name: string;
-  email: string;
-  message: string;
-  status: ContactStatus;
-  createdAt: Date;
-};
 
-interface ServerLocals {
-  prisma: {
-    contact: {
-      count: (args: { where?: Prisma.ContactWhereInput }) => Promise<number>;
-      findMany: (args: {
-        where?: Prisma.ContactWhereInput;
-        orderBy?: Prisma.ContactOrderByWithRelationInput;
-        skip?: number;
-        take?: number;
-        select?: Prisma.ContactSelect;
-      }) => Promise<ContactWithStatus[]>;
-      delete: (args: { where: { id: string } }) => Promise<void>;
-    };
-  };
-  session?: {
-    authenticated: boolean;
-  };
-}
+// Using App.Locals (augmented in src/app.d.ts) for typing
 
 export const load: PageServerLoad = async ({ url, cookies, locals }) => {
   // Check if user is logged in

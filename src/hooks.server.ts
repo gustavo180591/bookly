@@ -1,5 +1,8 @@
 import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export const handleAuth: Handle = async ({ event, resolve }) => {
   // Get session from cookies
@@ -33,4 +36,12 @@ export const handleAuth: Handle = async ({ event, resolve }) => {
   return resolve(event);
 };
 
-export const handle = sequence(handleAuth);
+export const handle: Handle = sequence(
+  // Attach Prisma to locals for downstream handlers
+  async ({ event, resolve }) => {
+    event.locals.prisma = prisma;
+    return resolve(event);
+  },
+  handleAuth
+);
+

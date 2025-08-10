@@ -70,6 +70,11 @@
     updateFilters();
   }
   
+  // Manual trigger for search via UI controls
+  function handleSearch() {
+    updateFilters();
+  }
+  
   // Redirect to login if not authenticated
   onMount(() => {
     if (!data.session?.authenticated) {
@@ -188,36 +193,6 @@
   $: allSelected = data.contacts.length > 0 && 
                   data.contacts.every(contact => selectedContacts.includes(contact.id));
 
-  // Status badge styles
-  const statusStyles = {
-    NEW: 'bg-blue-100 text-blue-800',
-    REVIEWED: 'bg-yellow-100 text-yellow-800',
-    REPLIED: 'bg-green-100 text-green-800'
-  };
-
-  // Status options for filter
-  const statusOptions = [
-    { value: '', label: 'Todos' },
-    { value: 'NEW', label: 'Nuevo' },
-    { value: 'REVIEWED', label: 'Revisado' },
-    { value: 'REPLIED', label: 'Respondido' }
-  ];
-  
-  // Handle search input with debounce
-  let searchTimeout: NodeJS.Timeout;
-  
-  $: if (searchQuery !== undefined) {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      updateFilters();
-    }, 500);
-  }
-  
-  // Handle status filter change
-  $: if (statusFilter !== undefined) {
-    updateFilters();
-  }
-  
   // Navigate to previous page
   function prevPage() {
     const params = new URLSearchParams($page.url.searchParams);
@@ -264,207 +239,10 @@
     goto(`?${params.toString()}`, { replaceState: true });
   }
 
-  // Handle search
-  function handleSearch() {
-    const params = new URLSearchParams($page.url.search);
-    if (searchQuery) {
-      params.set('search', searchQuery);
-    } else {
-      params.delete('search');
-    }
-    params.delete('page'); // Reset to first page
-    goto(`?${params.toString()}`, { replaceState: true });
-  }
-
-  // Handle sort
-  function handleSort(column: string) {
-    const params = new URLSearchParams($page.url.search);
-
-    if (data.sort === column) {
-      // Toggle order if same column
-      params.set('order', data.order === 'asc' ? 'desc' : 'asc');
-    } else {
-      // New column, default to asc
-      params.set('sort', column);
-      params.set('order', 'asc');
-    }
-
-    goto(`?${params.toString()}`, { replaceState: true });
-  }
-  // Types
-  type ContactStatus = 'NEW' | 'REVIEWED' | 'REPLIED';
   
-  interface Contact {
-    id: string;
-    name: string;
-    email: string;
-    message: string;
-    status: ContactStatus;
-    createdAt: string;
-  }
-
-  interface PageData {
-    contacts: Contact[];
-    total: number;
-    page: number;
-    perPage: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-    search?: string;
-    status?: string;
-    sort: string;
-    order: 'asc' | 'desc';
-    session?: {
-      authenticated: boolean;
-    };
-  }
-
-  // Component props
-  export let data: PageData;
   
-  // Local state
-  let searchQuery = $page.url.searchParams.get('search') || '';
-  let statusFilter = $page.url.searchParams.get('status') || '';
-  let selectedContacts: string[] = [];
-  let isBulkActionLoading = false;
 
-  // Status badge styles
-  const statusStyles = {
-    NEW: 'bg-blue-100 text-blue-800',
-    REVIEWED: 'bg-yellow-100 text-yellow-800',
-    REPLIED: 'bg-green-100 text-green-800'
-  };
-
-  // Status options for filter
-  const statusOptions = [
-    { value: '', label: 'Todos' },
-    { value: 'NEW', label: 'Nuevo' },
-    { value: 'REVIEWED', label: 'Revisado' },
-    { value: 'REPLIED', label: 'Respondido' }
-  ];
-
-  // Handle search input with debounce
-  let searchTimeout: ReturnType<typeof setTimeout>;
   
-  $: if (searchQuery !== undefined) {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      updateFilters();
-    }, 500);
-  }
-  
-  // Handle status filter change
-  $: if (statusFilter !== undefined) {
-    updateFilters();
-  }
-  
-  // Update URL with new filters
-  function updateFilters() {
-    const params = new URLSearchParams($page.url.searchParams);
-    
-    if (searchQuery) {
-      params.set('search', searchQuery);
-      params.set('page', '1'); // Reset to first page on new search
-    } else {
-      params.delete('search');
-    }
-    
-    if (statusFilter) {
-      params.set('status', statusFilter);
-      params.set('page', '1'); // Reset to first page on status change
-    } else {
-      params.delete('status');
-    }
-    
-    goto(`?${params.toString()}`, { replaceState: true });
-  }
-
-  // Handle sort
-  function handleSort(column: string) {
-    const params = new URLSearchParams($page.url.searchParams);
-    const currentSort = params.get('sort');
-    const currentOrder = params.get('order') as 'asc' | 'desc' | null;
-    
-    if (currentSort === column) {
-      params.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      params.set('sort', column);
-      params.set('order', 'asc');
-    }
-    
-    goto(`?${params.toString()}`, { replaceState: true });
-  }
-
-  // Get sort indicator
-  function getSortIndicator(column: string) {
-    if ($page.url.searchParams.get('sort') !== column) return '';
-    return $page.url.searchParams.get('order') === 'asc' ? '↑' : '↓';
-  }
-
-  // Format date
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  // Navigate to previous page
-  function prevPage() {
-    const params = new URLSearchParams($page.url.searchParams);
-    const currentPage = parseInt(params.get('page') || '1');
-    if (currentPage > 1) {
-      params.set('page', (currentPage - 1).toString());
-      goto(`?${params.toString()}`);
-    }
-  }
-  
-  // Navigate to next page
-  function nextPage() {
-    const params = new URLSearchParams($page.url.searchParams);
-    const currentPage = parseInt(params.get('page') || '1');
-    params.set('page', (currentPage + 1).toString());
-    goto(`?${params.toString()}`);
-  }
-
-  // Toggle select all contacts
-  function toggleSelectAll(event: Event) {
-    const target = event.target as HTMLInputElement;
-    if (target.checked) {
-      selectedContacts = data.contacts.map(contact => contact.id);
-    } else {
-      selectedContacts = [];
-    }
-  }
-
-  // Toggle single contact selection
-  function toggleContact(id: string, event: Event) {
-    const target = event.target as HTMLInputElement;
-    if (target.checked) {
-      selectedContacts = [...selectedContacts, id];
-    } else {
-      selectedContacts = selectedContacts.filter(contactId => contactId !== id);
-    }
-  }
-
-  // Check if a contact is selected
-  function isSelected(id: string) {
-    return selectedContacts.includes(id);
-  }
-
-  // Check if all contacts on current page are selected
-  $: allSelected = data.contacts.length > 0 && 
-                  data.contacts.every(contact => selectedContacts.includes(contact.id));
-  
-  // Redirect if not authenticated
-  onMount(() => {
-    if (data && !data.session) {
-      goto('/admin/login', { replaceState: true });
-    }
-  });
 </script>
 
 <div class="container mx-auto p-4">
@@ -721,15 +499,16 @@
           placeholder="Buscar por nombre, email o mensaje..."
           class="w-full p-2 border rounded"
           value={searchQuery}
-          on:input={(e) => {
-            searchQuery = (e.target as HTMLInputElement).value;
+          on:input={(e: Event) => {
+            const target = e.target as HTMLInputElement;
+            searchQuery = target.value;
             handleSearch();
           }}
         />
       </div>
       <select
         class="p-2 border rounded"
-        value={pageData?.data.status || ''}
+        value={statusFilter}
         on:change={handleStatusChange}
       >
         <option value="">Todos los estados</option>
@@ -752,31 +531,31 @@
         <thead>
           <tr class="bg-gray-100">
             <th class="py-2 px-4 text-left">
-              <a href={`?sort=name&order=${pageData?.data.order === 'asc' ? 'desc' : 'asc'}`}>
-                Nombre {#if pageData?.data.sort === 'name'}{pageData?.data.order === 'asc' ? '↑' : '↓'}{/if}
+              <a href={`?sort=name&order=${$page.url.searchParams.get('order') === 'asc' ? 'desc' : 'asc'}`}>
+                Nombre {#if $page.url.searchParams.get('sort') === 'name'}{$page.url.searchParams.get('order') === 'asc' ? '↑' : '↓'}{/if}
               </a>
             </th>
             <th class="py-2 px-4 text-left">
-              <a href={`?sort=email&order=${pageData?.data.order === 'asc' ? 'desc' : 'asc'}`}>
-                Email {#if pageData?.data.sort === 'email'}{pageData?.data.order === 'asc' ? '↑' : '↓'}{/if}
+              <a href={`?sort=email&order=${$page.url.searchParams.get('order') === 'asc' ? 'desc' : 'asc'}`}>
+                Email {#if $page.url.searchParams.get('sort') === 'email'}{$page.url.searchParams.get('order') === 'asc' ? '↑' : '↓'}{/if}
               </a>
             </th>
             <th class="py-2 px-4 text-left">Mensaje</th>
             <th class="py-2 px-4 text-left">
-              <a href={`?sort=status&order=${pageData?.data.order === 'asc' ? 'desc' : 'asc'}`}>
-                Estado {#if pageData?.data.sort === 'status'}{pageData?.data.order === 'asc' ? '↑' : '↓'}{/if}
+              <a href={`?sort=status&order=${$page.url.searchParams.get('order') === 'asc' ? 'desc' : 'asc'}`}>
+                Estado {#if $page.url.searchParams.get('sort') === 'status'}{$page.url.searchParams.get('order') === 'asc' ? '↑' : '↓'}{/if}
               </a>
             </th>
             <th class="py-2 px-4 text-left">
-              <a href={`?sort=createdAt&order=${pageData?.data.order === 'asc' ? 'desc' : 'asc'}`}>
-                Fecha {#if pageData?.data.sort === 'createdAt'}{pageData?.data.order === 'asc' ? '↑' : '↓'}{/if}
+              <a href={`?sort=createdAt&order=${$page.url.searchParams.get('order') === 'asc' ? 'desc' : 'asc'}`}>
+                Fecha {#if $page.url.searchParams.get('sort') === 'createdAt'}{$page.url.searchParams.get('order') === 'asc' ? '↑' : '↓'}{/if}
               </a>
             </th>
             <th class="py-2 px-4 text-right">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {#each pageData?.data.contacts || [] as contact}
+          {#each data.contacts || [] as contact}
             <tr class="border-t">
               <td class="py-2 px-4">{contact.name}</td>
               <td class="py-2 px-4">{contact.email}</td>
@@ -814,7 +593,7 @@
     <div class="mt-6 flex justify-between items-center">
       <div>
         <span class="text-sm text-gray-600">
-          Mostrando {pageData?.data.contacts?.length || 0} de {pageData?.data.total || 0} contactos
+          Mostrando {data.contacts?.length || 0} de {data.total || 0} contactos
         </span>
       </div>
       <div class="flex space-x-2">
@@ -838,7 +617,7 @@
     <!-- Export Button -->
     <div class="mt-6">
       <a
-        href={`/admin/contacts/export?${pageData?.url.searchParams.toString()}`}
+        href={`/admin/contacts/export?${$page.url.searchParams.toString()}`}
         class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
       >
         Exportar a CSV
@@ -852,4 +631,4 @@
       <button type="submit" class="text-red-600 hover:underline">Cerrar sesión</button>
     </form>
   </div>
-</div>
+

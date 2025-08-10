@@ -1,6 +1,4 @@
-import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { PRIVATE_ADMIN_PASSWORD } from '$env/static/private';
+import { json, type RequestHandler } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ url, cookies, locals }) => {
   // Check authentication
@@ -40,7 +38,7 @@ export const GET: RequestHandler = async ({ url, cookies, locals }) => {
     
     const csvRows = [
       headers.join(','),
-      ...contacts.map(contact => 
+      ...contacts.map((contact: any) => 
         [
           `"${contact.name.replace(/"/g, '""')}"`,
           contact.email,

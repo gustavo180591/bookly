@@ -2,9 +2,9 @@ import { fail, type Actions, type ActionFailure } from '@sveltejs/kit';
 import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
 
-type ContactStatus = 'NEW' | 'IN_PROGRESS' | 'RESOLVED' | 'SPAM';
+type ContactStatus = 'NEW' | 'REVIEWED' | 'REPLIED';
 import nodemailer from 'nodemailer';
-import { env } from '$env/dynamic/private';
+const env = process.env as Record<string, string | undefined>;
 
 const prisma = new PrismaClient();
 
@@ -85,7 +85,7 @@ const createTransporter = async () => {
       }
     }),
     from: `"Bookly Contact" <${env.PRIVATE_EMAIL}>`,
-    to: env.PRIVATE_EMAIL,
+    to: env.PRIVATE_EMAIL!,
     isDev: false
   };
 };

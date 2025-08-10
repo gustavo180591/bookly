@@ -2,7 +2,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   
-  export let data;
+  // No exported props needed here
   
   function handleLogout() {
     // Clear the session cookie
