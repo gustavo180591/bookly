@@ -1,14 +1,33 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import { applyAction } from '$app/forms';
   import { toast } from 'svelte-sonner';
   
-  export let form;
+  // Define form data type
+  interface FormData {
+    success?: boolean;
+    error?: string;
+    message?: string;
+    data?: {
+      name: string;
+      email: string;
+      message: string;
+    };
+    errors?: {
+      fieldErrors: {
+        [key: string]: string[];
+      };
+    };
+  }
   
-  $: if (form?.success) {
-    toast.success(form.message || 'Message sent successfully!');
-  } else if (form?.error) {
-    toast.error(form.error);
+  let form: FormData = {};
+  
+  // Handle form state changes
+  $: if (form) {
+    if (form.success) {
+      toast.success(form.message || 'Message sent successfully!');
+    } else if (form.error) {
+      toast.error(form.error);
+    }
   }
 </script>
 
@@ -36,70 +55,78 @@
           </div>
         </div>
       {:else}
-        <form method="POST" class="space-y-6" use:enhance={async ({ form, data, action, cancel }) => {
-          // Client-side validation
-          const formData = new FormData(form);
-          const name = formData.get('name')?.toString() || '';
-          const email = formData.get('email')?.toString() || '';
-          const message = formData.get('message')?.toString() || '';
-          
-          // Simple client-side validation
-          if (name.length < 2) {
-            toast.error('Name must be at least 2 characters');
-            cancel();
-            return;
-          }
-          
-          if (!email.includes('@')) {
-            toast.error('Please enter a valid email');
-            cancel();
-            return;
-          }
-          
-          if (message.length < 10) {
-            toast.error('Message must be at least 10 characters');
-            cancel();
-            return;
-          }
-          
-          // Show loading state
-          const submitButton = form.querySelector('button[type="submit"]');
-          const originalText = submitButton?.textContent;
-          if (submitButton) {
-            submitButton.disabled = true;
-            submitButton.innerHTML = `
-              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Sending...
-            `;
-          }
-          
-          try {
-            const response = await fetch(action, {
-              method: 'POST',
-              body: formData
-            });
+        <form 
+          method="POST" 
+          class="space-y-6" 
+          on:submit|preventDefault={async (e) => {
+            const form = e.currentTarget;
+            const formData = new FormData(form);
+            const name = formData.get('name')?.toString() || '';
+            const email = formData.get('email')?.toString() || '';
+            const message = formData.get('message')?.toString() || '';
             
-            const result = await response.json();
-            
-            if (result.type === 'success') {
-              form.reset();
-              await applyAction(result);
-            } else {
-              throw new Error(result.error || 'Failed to send message');
+            // Simple client-side validation
+            if (name.length < 2) {
+              toast.error('Name must be at least 2 characters');
+              return;
             }
-          } catch (error) {
-            console.error('Error submitting form:', error);
-            toast.error(error.message || 'Failed to send message. Please try again.');
-          } finally {
+            
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+              toast.error('Please enter a valid email address');
+              return;
+            }
+            
+            if (message.length < 10) {
+              toast.error('Message must be at least 10 characters');
+              return;
+            }
+            
+            // Show loading state
+            const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+            const originalHTML = submitButton?.innerHTML || '';
+            
             if (submitButton) {
-              submitButton.disabled = false;
-              submitButton.textContent = originalText;
+              submitButton.disabled = true;
+              submitButton.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Sending...
+              `;
             }
-          }
-        }}>
+            
+            try {
+              const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData
+              });
+              
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              
+              const result = await response.json();
+              
+              if (result.type === 'success') {
+                // Reset form on success
+                form.reset();
+                form = { success: true, message: result.message };
+                toast.success('Message sent successfully!');
+              } else {
+                throw new Error(result.error || 'Failed to send message');
+              }
+            } catch (error) {
+              console.error('Error submitting form:', error);
+              const errorMessage = error instanceof Error ? error.message : 'Failed to send message. Please try again.';
+              toast.error(errorMessage);
+            } finally {
+              if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalHTML;
+              }
+            }
+          }}>
           {#if form?.errors?.fieldErrors}
             <div class="rounded-md bg-red-50 p-4 mb-6">
               <div class="flex">
