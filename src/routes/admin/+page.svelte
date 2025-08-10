@@ -848,7 +848,7 @@
   
   <!-- Logout Button -->
   <div class="mt-6 text-right">
-    <form action="/admin/logout" method="POST">
+    <form action="?/logout" method="POST">
       <button type="submit" class="text-red-600 hover:underline">Cerrar sesión</button>
     </form>
   </div>

@@ -1,9 +1,20 @@
-import { redirect } from '@sveltejs/kit';
+import { redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { env } from '$env/dynamic/private';
 import type { ContactStatus, Prisma } from '@prisma/client';
 
-// Define types for server-side context
+// Number of contacts per page
+const CONTACTS_PER_PAGE = 10;
+
+// Server-side types
+type ContactWithStatus = {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  status: ContactStatus;
+  createdAt: Date;
+};
+
 interface ServerLocals {
   prisma: {
     contact: {
@@ -14,67 +25,29 @@ interface ServerLocals {
         skip?: number;
         take?: number;
         select?: Prisma.ContactSelect;
-      }) => Promise<Array<{
-        id: string;
-        name: string;
-        email: string;
-        message: string;
-        status: ContactStatus;
-        createdAt: Date;
-      }>>;
+      }) => Promise<ContactWithStatus[]>;
       delete: (args: { where: { id: string } }) => Promise<void>;
     };
   };
+  session?: {
+    authenticated: boolean;
+  };
 }
 
-interface PageData {
-  session: boolean;
-  contacts: Array<{
-    id: string;
-    name: string;
-    email: string;
-    message: string;
-    status: ContactStatus;
-    createdAt: Date;
-  }>;
-  total: number;
-  page: number;
-  perPage: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-  search?: string;
-  status?: string;
-  sort: string;
-  order: 'asc' | 'desc';
-}
-
-export const load: PageServerLoad<PageData> = async ({ 
-  url, 
-  cookies, 
-  locals 
-}: { 
-  url: URL; 
-  cookies: { get: (name: string) => string | undefined }; 
-  locals: ServerLocals 
-}) => {
+export const load: PageServerLoad = async ({ url, cookies, locals }) => {
   // Check if user is logged in
   const session = cookies.get('admin_session');
   if (!session) {
     throw redirect(302, '/admin/login');
   }
 
-  // Check if PRIVATE_ADMIN_PASSWORD is set
-  if (!env.PRIVATE_ADMIN_PASSWORD) {
-    throw new Error('PRIVATE_ADMIN_PASSWORD is not set in environment variables');
-  }
-
   // Handle pagination
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
-  const perPage = 10;
+  const perPage = CONTACTS_PER_PAGE;
   const skip = (page - 1) * perPage;
 
   // Handle sorting
-  const sort = (url.searchParams.get('sort') as keyof typeof Prisma.ContactScalarFieldEnum) || 'createdAt';
+  const sort = (url.searchParams.get('sort') || 'createdAt') as string;
   const order = (url.searchParams.get('order') === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc';
   const orderBy = { [sort]: order } as Prisma.ContactOrderByWithRelationInput;
 
@@ -128,7 +101,7 @@ export const load: PageServerLoad<PageData> = async ({
   }>;
 
   return {
-    session: true,
+    session: { authenticated: true },
     contacts: typedContacts,
     total,
     page,
@@ -139,33 +112,43 @@ export const load: PageServerLoad<PageData> = async ({
     status: status || undefined,
     sort,
     order
-  };
+  } satisfies Record<string, unknown>;
 };
 
 export const actions: Actions = {
-  logout: async ({ cookies }: { cookies: { delete: (name: string, options: { path: string }) => void } }) => {
-    cookies.delete('admin_session', { path: '/' });
+  // Handle logout
+  logout: async ({ cookies }) => {
+    cookies.delete('admin_session', { 
+      path: '/admin',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
     throw redirect(303, '/admin/login');
   },
   
-  deleteContact: async ({ 
-    request, 
-    locals 
-  }: { 
-    request: Request; 
-    locals: ServerLocals 
-  }) => {
+  // Handle contact deletion
+  deleteContact: async ({ request, locals }) => {
+    if (!locals.session?.authenticated) {
+      throw error(401, 'Unauthorized');
+    }
+    
     const data = await request.formData();
     const id = data.get('id') as string;
     
     if (!id) {
-      throw new Error('Contact ID is required');
+      throw error(400, 'Contact ID is required');
     }
     
-    await locals.prisma.contact.delete({
-      where: { id }
-    });
-    
-    return { success: true };
+    try {
+      await locals.prisma.contact.delete({
+        where: { id }
+      });
+      
+      return { success: true };
+    } catch (err) {
+      console.error('Error deleting contact:', err);
+      throw error(500, 'Failed to delete contact');
+    }
   }
 };
