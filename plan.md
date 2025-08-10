@@ -54,16 +54,16 @@
 ## 3) Paso a paso de desarrollo (checklist operativo)
 
 ### 3.1 Base del proyecto
-- [ ] Confirmar versiones de `svelte`, `@sveltejs/kit`, `tailwindcss` y `prisma` (actualizar si aplica).
+- [x] Confirmar versiones de `svelte`, `@sveltejs/kit`, `tailwindcss` y `prisma` (actualizar si aplica).
 - [ ] Revisar `svelte.config.js` (adapter Node por defecto, cambiar para Vercel si corresponde).
 - [ ] Verificar `vite.config.ts` y `tailwind.config.ts` (paths correctos).
 - [ ] Ejecutar `npm run lint` y `npm run format` para baseline de estilo.
 
 ### 3.2 Base de datos y Prisma
-- [ ] Ajustar `DATABASE_URL` en `.env` para local y/o Docker.
-- [ ] `npm run prisma:generate` (cliente preparado).
-- [ ] `npm run prisma:push` (sin migraciones, usa db push para ejemplo).
-- [ ] `npm run prisma:seed` (datos semilla `Contact`).
+- [x] Ajustar `DATABASE_URL` en `.env` para local y/o Docker.
+- [x] `npm run prisma:generate` (cliente preparado).
+- [x] `npm run prisma:push` (sin migraciones, usa db push para ejemplo).
+- [x] `npm run prisma:seed` (datos semilla `Contact`).
 
 ### 3.3 Formulario de Landing
 - [ ] Validación **cliente** (inputs con errores visibles, `aria-*`, focus).
